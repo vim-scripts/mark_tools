@@ -1,0 +1,49 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=2929
+
+The plugin is another try on Vim marks. Often I end up using two separate mark groups for navigation (a-f and t-z) so I created a plugin to simplify this. Version 1.1 adds the ability to display marks in quickfix and location list windows.
+
+Provided mappings:
+<Plug>ToggleMarkAZ - mark/unmark current position, if there are multiple marks on the line, remove the first
+<Plug>ToggleMarkZA - mark/unmark current position, if there are multiple marks on the line, remove the last
+<Plug>ForceMarkAZ - add an unused mark starting from a, even if the position is marked
+<Plug>ForceMarkZA - add an unused mark starting from z, even if the position is marked
+<Plug>NextMarkPos - go to next mark
+<Plug>PrevMarkPos - go to prev mark
+<Plug>NextMarkLexi - go to previous mark in lexicographical order
+<Plug>PrevMarkLexi - go to next mark in lexicographical order
+<Plug>MarksLoc    - open location list window with local mark positions
+<Plug>MarksQF	    - open quickfix window with marks
+
+Recommended mapping to put into your .vimrc:
+nmap <Leader>a <Plug>ToggleMarkAZ
+nmap <Leader>z <Plug>ToggleMarkZA
+nmap <Leader>A <Plug>ForceMarkAZ
+nmap <Leader>Z <Plug>ForceMarkZA
+nmap <Leader>m <Plug>NextMarkPos
+nmap <Leader>M <Plug>PrevMarkPos
+nmap <Leader>l <Plug>NextMarkLexi
+nmap <Leader>L <Plug>PrevMarkLexi
+nmap <Leader>w <Plug>MarksLoc
+nmap <Leader>W <Plug>MarksQF
+
+So
+\a and \z will toggle a mark at current line
+\A and \Z force another mark
+\m and \M go to next/prev mark
+\l and \L go to next/prev mark alphabetically
+\w and \W populate location list/quickfix window with marks
+
+Also I suggest to install a plugin to visualise marks e.g. quickfixsigns (vimscript#2584)
+
+Customisation:
+toggle_marks_wrap_search variable controls whether search wraps around or not (order of precedence: w:toggle_marks_wrap_search, b:toggle_marks_wrap_search, g:toggle_marks_wrap_search)
+Possible values:
+-1 - use 'wrapscan' option value
+ 0 - do not wrap
+ 1 - always wrap (default)
+
+Variables below define which marks should be displayed in loclist and quickfix windows respectively
+let g:lmarks_names = 'abcdefghijklmnopqrstuvwxyz''.'
+let g:gmarks_names = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+I use the plugin on daily basis. If you found any problems or want to suggest a feature, drop me an email.
