@@ -1,19 +1,22 @@
-" Toggle and navigate local bookmarks
-" Last Change:	2010 Jan 15
+" Toggle and navigate bookmarks
+" Last Change:	2010 Jan 28
+" URL: http://www.vim.org/scripts/script.php?script_id=2929
 " Maintainer:  Sergey Khorev <sergey.khorev@gmail.com>
 " vim: set ft=vim ts=8 sts=2 sw=2:
 "
 " MAPPINGS DEFINED:
 "<Plug>ToggleMarkAZ - mark/unmark current position
 "		      if there are multiple marks on the line, remove the first
-"<Plug>ToggleMarkAZ - mark/unmark current position
+"<Plug>ToggleMarkZA - mark/unmark current position
 "		      if there are multiple marks on the line, remove the last
 " <Plug>ForceMarkAZ - add an unused mark starting from a, even if the position is marked
 " <Plug>ForceMarkZA - add an unused mark starting from z, even if the position is marked
 " <Plug>NextMarkPos - go to next mark
 " <Plug>PrevMarkPos - go to prev mark
-" <Plug>NextMarkLexi - go to previous mark in lexicographical order
-" <Plug>PrevMarkLexi - go to next mark in lexicographical order
+" <Plug>NextMarkLexi- go to previous mark in lexicographical order
+" <Plug>PrevMarkLexi- go to next mark in lexicographical order
+" <Plug>MarksLoc    - open location list window with local mark positions
+" <Plug>MarksQF	    - open quickfix window with marks
 "
 " recommended mapping:
 " nmap <Leader>a <Plug>ToggleMarkAZ
@@ -24,14 +27,37 @@
 " nmap <Leader>M <Plug>PrevMarkPos
 " nmap <Leader>l <Plug>NextMarkLexi
 " nmap <Leader>L <Plug>PrevMarkLexi
+" nmap <Leader>w <Plug>MarksLoc
+" nmap <Leader>W <Plug>MarksQF
 " so
 " \a and \z toggle a mark at current line
 " \A and \Z force another mark
 " \m and \M go to next/prev mark
 " \l and \L go to next/prev mark alphabetically
+" \w and \W open location list/quickfix window with defined marks
 "
 " Also I recommend installation of a plugin to visualise marks
 " e.g. quickfixsigns (http://www.vim.org/scripts/script.php?script_id=2584)
+"
+" CUSTOMISATION:
+" toggle_marks_wrap_search variable controls whether search wraps around or not
+" (order of precedence: w:toggle_marks_wrap_search, b:toggle_marks_wrap_search, g:toggle_marks_wrap_search)
+" Possible values:
+" -1 - use 'wrapscan' option value
+"  0 - do not wrap
+"  1 - always wrap (default)
+"
+"  To customise marks which you want to see in location list and quickfix
+"  windows you can override variables below:
+"  let g:lmarks_names = 'abcdefghijklmnopqrstuvwxyz''.'
+"  let g:gmarks_names = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+"
+" When using \w and \W with quickfixsigns plugin, you may want to protect mark signs from
+" quickfix signs with:
+" let g:quickfixsigns_lists = [
+"      \ {'sign': 'QFS_QFL', 'get': 'g:NonMarkQFEntries()', 'event': ['BufEnter']},
+"      \ {'sign': 'QFS_LOC', 'get': 'g:NonMarkLocEntries(winnr())', 'event': ['BufEnter']},
+"      \ ]
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -45,11 +71,11 @@ unlockvar s:marks_names
 unlockvar s:marks_count
 unlockvar s:marks_nlist
 let s:marks_names = 'abcdefghijklmnopqrstuvwxyz'
-let s:marks_count = strlen(s:marks_names)
 let s:marks_nlist = split(s:marks_names, '\zs')
+let s:marks_count = strlen(s:marks_names)
 lockvar s:marks_names
-lockvar s:marks_count
 lockvar s:marks_nlist
+lockvar s:marks_count
 
 function! s:LocalMarkList()
   return map(copy(s:marks_nlist), '[v:val, line("''" . v:val)]')
@@ -208,6 +234,59 @@ function! s:PrevByAlpha()
   endif
 endfunction
 
+if !exists('g:lmarks_names')
+  let g:lmarks_names = 'abcdefghijklmnopqrstuvwxyz''.'
+endif
+
+if !exists('g:gmarks_names')
+  let g:gmarks_names = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+endif
+
+unlockvar s:lmarks_nlist
+unlockvar s:gmarks_nlist
+let s:lmarks_nlist = split(g:lmarks_names, '\zs')
+let s:gmarks_nlist = split(g:gmarks_names, '\zs')
+lockvar s:lmarks_nlist
+lockvar s:gmarks_nlist
+
+function! s:CreateMarkEntry(mark)
+  let [buf, lnum, col, off] = getpos("'" . a:mark)
+  let lines = getbufline(buf, lnum)
+  if buf == 0
+    return {'lnum': 0}
+  else
+    return {'bufnr': buf, 'lnum': lnum, 'col': col, 'type': 'M',
+      \'text': a:mark . ': ' . (empty(lines) ? '' : lines[0])}
+  endif
+endfunction
+
+function! s:MarksLoc()
+  call setloclist(0,
+	\filter(
+	  \map(
+	    \copy(s:lmarks_nlist), 
+	    \'{"bufnr": bufnr("%"), "lnum": line("''" . v:val), "col": col("''" . v:val), 
+	      \"type": "m", "text": v:val . ": " . getline(line("''" . v:val))}'),
+	  \'v:val.lnum > 0'))
+  lopen
+endfunction
+
+function! s:MarksQF()
+  call setqflist(
+	\filter(
+	  \map(
+	    \copy(s:gmarks_nlist), 's:CreateMarkEntry(v:val)'),
+	  \'v:val.lnum > 0'))
+  copen
+endfunction
+
+function! g:NonMarkQFEntries()
+  return filter(getqflist(), 'v:val.type !=? "m"')
+endfunction
+
+function! g:NonMarkLocEntries(winnr)
+  return filter(getloclist(a:winnr), 'v:val.type !=? "m"')
+endfunction
 
 " suggested mapping: <Leader>a and <Leader>z
 nnoremap <silent> <Plug>ToggleMarkAZ :call <SID>ToggleMarks(1, 0)<CR>
@@ -221,5 +300,8 @@ nnoremap <silent> <Plug>PrevMarkPos :call <SID>PrevByPos()<CR>
 " suggested mapping: <Leader>l and <Leader>L (lexicographic)
 nnoremap <silent> <Plug>NextMarkLexi :call <SID>NextByAlpha()<CR>
 nnoremap <silent> <Plug>PrevMarkLexi :call <SID>PrevByAlpha()<CR>
+" suggested mapping: <Leader>w and <Leader>W
+nnoremap <silent> <Plug>MarksLoc :call <SID>MarksLoc()<CR>
+nnoremap <silent> <Plug>MarksQF :call <SID>MarksQF()<CR>
 
 let &cpo = s:save_cpo
